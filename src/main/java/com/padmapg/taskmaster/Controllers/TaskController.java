@@ -25,10 +25,24 @@ public class TaskController {
     public Task addNewTask (@RequestBody Task task) {
         Task newTask = new Task();
         newTask.setTitle(task.getTitle());
-        newTask.setDescription( task.getDescription() );
+        newTask.setDescription(task.getDescription() );
         newTask.setStatus("Available");
         taskRepository.save(newTask);
         return newTask;
+    }
+
+    @PutMapping("/tasks/{id}/state")
+    public Task updateTaskStatus (@PathVariable String id) {
+        Task task = taskRepository.findById(id).get();
+        if (task.getStatus().equals("Available")) {
+            task.setStatus("Assigned");
+        } else if (task.getStatus().equals("Assigned")) {
+            task.setStatus("Accepted");
+        } else if (task.getStatus().equals("Accepted")) {
+            task.setStatus("Finished");
+        }
+        taskRepository.save(task);
+        return task;
     }
 
 }
