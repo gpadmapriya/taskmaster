@@ -3,8 +3,10 @@ package com.padmapg.taskmaster.Controllers;
 import com.padmapg.taskmaster.Models.History;
 import com.padmapg.taskmaster.Models.Task;
 import com.padmapg.taskmaster.Models.TaskRepository;
+import com.padmapg.taskmaster.config.S3Client;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Date;
 import java.util.List;
@@ -18,6 +20,12 @@ public class TaskController {
     @Autowired
     TaskRepository taskRepository;
 
+    private S3Client s3Client;
+
+    @Autowired
+    TaskController(S3Client s3Client) {
+        this.s3Client = s3Client;
+    }
     @GetMapping("/")
     public String getHome() {
         return "index";
@@ -28,6 +36,11 @@ public class TaskController {
         return (List) taskRepository.findAll();
     }
 
+    @GetMapping("/tasks/{id}")
+    public Task getSingleTask(@PathVariable String id) {
+        return taskRepository.findById(id).get();
+    }
+
     @GetMapping("/users/{name}/tasks")
     public List<Task> getTasksForUser(@PathVariable String name) {
         return taskRepository.findByAssignee(name);
@@ -36,21 +49,29 @@ public class TaskController {
     @PostMapping("/tasks")
     public Task addNewTask(@RequestBody Task task) {
         Task t = new Task(task.getId(), task.getTitle(), task.getDescription(), "Available", "none");
-        historySetter(t);
+        t.addHistory();
         taskRepository.save(t);
         return t;
     }
 
+    @PostMapping("/tasks/{id}/image")
+    public Task addImageToTask(@PathVariable String id, @RequestPart(value = "file") MultipartFile file) {
+        String pic = this.s3Client.uploadFile(file);
+        Task t = taskRepository.findById(id).get();
+        t.setImage(pic);
+        taskRepository.save(t);
+        return t;
+    }
 
     @PutMapping("/tasks/{id}/state")
     public Task updateTaskStatus (@PathVariable String id) {
         Task task = taskRepository.findById(id).get();
         if (task.getStatus().equals("Assigned")) {
             task.setStatus("Accepted");
-            historySetter(task);
+            task.addHistory();
         } else if (task.getStatus().equals("Accepted")) {
             task.setStatus("Finished");
-            historySetter(task);
+            task.addHistory();
         }
         taskRepository.save(task);
         return task;
@@ -61,22 +82,16 @@ public class TaskController {
         Task t = taskRepository.findById(id).get();
         t.setAssignee(assignee);
         t.setStatus("Assigned");
-        historySetter(t);
+        t.addHistory();
         taskRepository.save(t);
         return t;
     }
 
-    @DeleteMapping("/tasks/{id}/delete")
+    @DeleteMapping("/tasks/{id}")
     public Task deleteTaskStatus(@PathVariable String id) {
         Task t = taskRepository.findById(id).get();
         taskRepository.delete(t);
         return t;
-    }
-
-    //Helper method
-    private void historySetter(Task t) {
-        History history = new History(new Date().toString(), t.getStatus());
-        t.addHistory(history);
     }
 
 }
