@@ -7,6 +7,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
 import com.amazonaws.services.dynamodbv2.model.AttributeValue;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 @DynamoDBTable(tableName = "task")
 public class Task {
@@ -16,6 +17,7 @@ public class Task {
     private String status;
     private String assignee;
     private ArrayList<History> history;
+    private String image;
 
     public Task() {}
 
@@ -75,7 +77,18 @@ public class Task {
         this.history = history;
     }
 
-    public void addHistory(History history){
+    public void addHistory(){
+        History history = new History(new Date().toString(), this.status);
+        //history.setAssignee(this.assignee);
         this.history.add(history);
+    }
+
+    @DynamoDBAttribute
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }
